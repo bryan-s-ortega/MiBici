@@ -195,6 +195,52 @@ def _normalize_text(values: pd.Series) -> pd.Series:
     )
 
 
+
+def parse_trip_dates(values: pd.Series) -> pd.Series:
+    """Interpreta fechas con reglas explícitas, sin inferir día y mes.
+
+    Las fechas con barras se interpretan como día/mes/año.
+    Las fechas con guiones admitidas comienzan por el año.
+    Rechaza valores faltantes, fechas imposibles y formatos desconocidos.
+    Conserva la hora local tal como aparece en la fuente, sin convertir a UTC.
+    """
+    text = values.astype("string").str.strip()
+    if text.isna().any() or text.eq("").any():
+        raise ValueError("Hay fechas faltantes o vacías.")
+
+    result = pd.Series(
+        pd.NaT, index=values.index, dtype="datetime64[ns]", name=values.name
+    )
+    recognized = pd.Series(False, index=values.index)
+
+    formats = [
+        (r"\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}",
+         "%d/%m/%Y %H:%M"),
+        (r"\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}:\d{2}",
+         "%d/%m/%Y %H:%M:%S"),
+        (r"\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}",
+         "%Y-%m-%d %H:%M"),
+        (r"\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}:\d{2}",
+         "%Y-%m-%d %H:%M:%S"),
+        (r"\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}:\d{2}\.\d{1,9}",
+         "%Y-%m-%d %H:%M:%S.%f"),
+    ]
+
+    for pattern, date_format in formats:
+        mask = text.str.fullmatch(pattern)
+        if mask.any():
+            result.loc[mask] = pd.to_datetime(
+                text.loc[mask], format=date_format, errors="raise", exact=True
+            ).astype("datetime64[ns]")
+            recognized |= mask
+
+    if not recognized.all():
+        examples = text.loc[~recognized].head(3).tolist()
+        raise ValueError(f"Formato de fecha no contemplado: {examples}")
+
+    return result
+
+
 def normalize_trip_chunk(chunk: pd.DataFrame, stations: pd.DataFrame) -> pd.DataFrame:
     trips = chunk.copy()
     trips.columns = [_normalize_column_name(column) for column in trips.columns]
@@ -214,7 +260,7 @@ def normalize_trip_chunk(chunk: pd.DataFrame, stations: pd.DataFrame) -> pd.Data
     trips["birth_year"] = _parse_nullable_integer(trips["birth_year"], "birth_year")
     trips["gender"] = _normalize_text(trips["gender"])
     for column in ("started_at", "ended_at"):
-        trips[column] = pd.to_datetime(trips[column], errors="raise", format="mixed")
+        trips[column] = parse_trip_dates(trips[column])
 
     station_lookup = stations.set_index("station_id")
     for side, station_id in (
@@ -303,6 +349,18 @@ def download_and_clean(
             logger.info("Downloading trips for {}-{:02d}", year, month)
             for chunk in _read_trip_csv_chunks(url):
                 normalized = normalize_trip_chunk(chunk, stations)
+
+                # Validar antes del filtro de fechas evita ocultar viajes
+                # que quedaron desplazados de mes por una conversión incorrecta.
+                starts = normalized["started_at"]
+                expected_month = starts.dt.year.eq(year) & starts.dt.month.eq(month)
+                if not expected_month.all():
+                    examples = starts.loc[~expected_month].head(3).astype(str).tolist()
+                    raise ValueError(
+                        f"CSV {year}-{month:02d}: "
+                        f"{int((~expected_month).sum())} inicios fuera del mes. "
+                        f"Ejemplos: {examples}"
+                    )
                 in_range = normalized["started_at"].ge(start) & normalized["started_at"].lt(end)
                 normalized = normalized.loc[in_range]
                 if normalized.empty:

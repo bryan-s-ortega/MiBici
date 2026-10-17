@@ -30,3 +30,22 @@ try:
     logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 except ModuleNotFoundError:
     pass
+
+# Configuración de P2
+P2_INTERVAL_MINUTES = 30
+P2_BATCH_SIZE = 200_000
+P2_TRIPS_PATH = PROCESSED_DATA_DIR / "trips_fechas_corregidas.parquet"
+P2_STATIONS_PATH = RAW_DATA_DIR / "stations_nomenclature_reconstruccion.csv"
+P2_MOVEMENTS_PATH = INTERIM_DATA_DIR / "p2_movimientos_corregidos.parquet"
+
+# Reglas iniciales para construir ejemplos de clasificación de P2.
+P2_ACTIVITY_DAYS = 7
+P2_PRESSURE_THRESHOLD = 0.30
+
+# Periodos del dataset supervisado P2
+P2_DATA_START = "2023-11-01"
+P2_DATA_END = "2026-10-01"  # Exclusivo: incluye hasta septiembre.
+P2_TRAIN_END = "2026-01-01"
+P2_VALIDATION_END = "2026-07-01"
+P2_EXAMPLES_PATH = PROCESSED_DATA_DIR / "p2_examples.parquet"
+P2_EXAMPLES_SUMMARY_PATH = INTERIM_DATA_DIR / "p2_examples_summary.json"

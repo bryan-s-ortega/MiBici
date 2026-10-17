@@ -66,3 +66,9 @@ __pypackages__/
 
 # Ruff stuff:
 .ruff_cache/
+
+# Experimentos locales de MLflow
+/mlflow_mibici.db
+/mlflow_mibici.db-*
+/mlruns/
+/mlartifacts/
