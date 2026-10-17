@@ -17,7 +17,9 @@ classifiers = [
 ]
 dependencies = [
     "dvc-gs>=3.0.1",
+    "joblib>=1.6.0",
     "loguru>=0.7.3", # Loggings
+    "mlflow>=3.17.1",
     "pandas>=3.0.6", # Data Processing
     "pyarrow>=18.0", # Parquet output
     "python-dotenv>=1.2.4", # Env variables
