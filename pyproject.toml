@@ -1,56 +1,20 @@
-[build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
-name = "mibici"
-version = "0.0.1"
-description = "Proyecto de MLOps con datos del sistema de bicicleta p\u00fablica del \u00c1rea Metropolitana de Guadalajara. MiBici"
-authors = [
-  { name = "Bryan, Miguel Angel y Kevin" },
-]
-license = { file = "LICENSE" }
-readme = "README.md"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
-]
+name = "mibici-proyecto"
+version = "0.1.0"
+description = "Pipeline reproducible para el proyecto integrador de MiBici"
+requires-python = ">=3.10"
 dependencies = [
-    "dvc-gs>=3.0.1",
-    "loguru>=0.7.3", # Loggings
-    "mlflow==3.16.1",
-    "pandas>=3.0.6", # Data Processing
-    "pyarrow>=18.0", # Parquet output
-    "python-dotenv>=1.2.4", # Env variables
-    "scikit-learn>=1.9.1", # ML models
-    "tqdm>=4.70.1", # Progress Bars
-    "typer>=0.27.3", # CLI's
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "matplotlib>=3.7",
+  "mlflow>=2.10",
 ]
-requires-python = "~=3.13.0"
 
+[project.scripts]
+mibici-ingest = "mibici.ingestion:main"
+mibici-train = "mibici.training:main"
 
 [tool.ruff]
-line-length = 99
-src = ["mibici"]
-extend-exclude = ["*.ipynb", "notebooks"]
-force-exclude = true
-include = ["pyproject.toml", "mibici/**/*.py"]
+line-length = 100
 
-[tool.ruff.lint]
-extend-select = ["I"]  # Add import sorting
-
-[tool.ruff.lint.isort]
-known-first-party = ["mibici"]
-force-sort-within-sections = true
-
-[dependency-groups]
-dev = [
-    "jupyter>=1.1.1",
-    "matplotlib>=3.11.2",
-    "mkdocs>=1.6.1",
-    "dvc>=3.60", # Data versioning
-    "pytest>=9.1.1",
-    "ruff>=0.17.1",
-    "pre-commit>=4.7.0",
-    "python-docx>=1.2.0",
-]

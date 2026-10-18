@@ -1,74 +1,17 @@
-# Data
-/data/
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.DS_Store
+.ipynb_checkpoints/
 
-# Experiments
+# Datos y salidas grandes
+data/raw/*.csv
+data/processed/*.csv
+models/*.joblib
+models/*.pkl
+
+# MLflow local
 mlruns/
 mlartifacts/
-
-# Models
-*.pkl
-*.joblib
-
-# Mac OS-specific storage files
-.DS_Store
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# MkDocs documentation
-docs/site/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Environments
-.env
-.venv
-
-# Ruff stuff:
-.ruff_cache/
-
-# Experimentos locales de MLflow
-/mlflow_mibici.db
-/mlflow_mibici.db-*
-/mlruns/
-/mlartifacts/
+mlflow.db

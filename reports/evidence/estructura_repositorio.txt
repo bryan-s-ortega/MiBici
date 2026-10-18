@@ -1,0 +1,30 @@
+MiBici_Proyecto/
+├── README.md
+├── config.py
+├── pyproject.toml
+├── requirements.txt
+├── data/
+│   ├── raw/              # CSV locales; excluidos de Git
+│   └── processed/        # salidas reproducibles; excluidas de Git
+├── notebooks/
+│   └── mibici_propuesta_base.ipynb
+├── src/mibici/
+│   ├── dataset.py
+│   ├── ingestion.py
+│   ├── features.py
+│   └── training.py
+├── tests/
+│   └── test_pipeline.py
+├── models/               # modelos serializados; excluidos de Git
+├── reports/
+│   ├── evidence/         # capturas de MLflow
+│   └── figures/           # métricas y gráfica P3
+└── references/
+    ├── arquitectura.md
+    ├── data_manifest.csv
+    ├── entrega_checklist.md
+    ├── evidencia_mlflow.md
+    ├── fuentes.md
+    ├── ml_canvas.md
+    ├── propuesta_entrega.md
+    └── referencias_apa7.md

@@ -1,250 +1,81 @@
-# mibici
+# Proyecto MiBici
 
-<a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
-    <img src="https://img.shields.io/badge/CCDS-Plantilla%20de%20proyecto-328F97?logo=cookiecutter" />
-</a>
+**Equipo 23.** Propuesta reproducible de Machine Learning para las tres preguntas del proyecto
+integrador: pronóstico de viajes (P1), riesgo operacional aproximado (P2) y
+agrupación de estaciones (P3).
 
-Proyecto de MLOps con datos del sistema de bicicleta pública del Área Metropolitana de Guadalajara, MiBici.
+## Integrantes
 
-## Estructura del proyecto
+- Miguel Ángel Durán Betancourt
+- Juan Pablo Islas Guzmán — A01797727
+- Bryan Steve Ortega Castillo
+- Kevin Rogelio Rodriguez Magaña
 
-```
-├── LICENSE            <- Licencia de código abierto (si se define una)
-├── Taskfile.yml       <- Archivo de tareas con comandos convenientes como `task data` o `task test`
-├── README.md          <- Documento principal para desarrolladores del proyecto.
-├── data
-│   ├── external       <- Datos provenientes de fuentes de terceros.
-│   ├── interim        <- Datos intermedios que han sido transformados.
-│   ├── processed      <- Conjuntos de datos finales y canónicos para modelado.
-│   └── raw            <- Datos originales e inmutables descargados.
-│
-├── docs               <- Proyecto predeterminado de mkdocs; consulta www.mkdocs.org para detalles.
-│
-├── models             <- Modelos entrenados y serializados, predicciones o resúmenes de modelos.
-│
-├── notebooks          <- Jupyter notebooks. La convención de nombres es un número (para ordenamiento),
-│                         las iniciales del autor y una descripción breve separada por `-`, ej.
-│                         `1.0-jqp-exploracion-inicial-datos`.
-│
-├── pyproject.toml     <- Archivo de configuración del proyecto con metadatos del paquete
-│                         mibici y configuración de herramientas como ruff.
-│
-├── references         <- Diccionarios de datos, manuales y materiales explicativos.
-│
-├── reports            <- Análisis generados en HTML, PDF, LaTeX, etc.
-│   └── figures        <- Gráficos y figuras generadas para su uso en reportes.
-│
-├── requirements.txt   <- Archivo de requerimientos para reproducir el entorno (si aplica).
-│
-├── setup.cfg          <- Archivo de configuración para linters.
-│
-└── mibici             <- Código fuente del proyecto.
-    │
-    ├── __init__.py             <- Convierte a mibici en un módulo de Python
-    │
-    ├── config.py               <- Variables útiles y configuraciones del proyecto
-    │
-    ├── dataset.py              <- Scripts para descargar o procesar datos
-    │
-    ├── features.py             <- Código para generar variables (features) para modelado
-    │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Código para inferencia con modelos entrenados          
-    │   └── train.py            <- Código para entrenar modelos
-    │
-    └── plots.py                <- Código para generar visualizaciones
-```
-
-## Gestión y descarga del conjunto de datos
-
-Existen dos maneras de obtener los datos para trabajar en el proyecto: **descargar los datos versionados existentes desde el almacenamiento remoto** (enfoque recomendado para colaborar) o **reconstruir y procesar el dataset desde la fuente externa**.
-
-### 1. Descargar el dataset existente desde el almacenamiento remoto (Recomendado)
-
-Para comenzar a trabajar de inmediato con la versión oficial de los datos sin procesar gigabytes de archivos crudos ni depender de la web de MiBici, descarga los artefactos rastreados en DVC desde el bucket de Google Cloud Storage (`gs://mibici-mlops-project`):
-
-```bash
-# 1. Autentícate con tus credenciales de Google Cloud
-gcloud auth application-default login
-
-# 2. Descarga los datos versionados exactos
-uv run dvc pull
-# o alternativamente con Task:
-task dvc:pull
-```
-
-> **Permisos de acceso:** Tu cuenta de Google requiere permisos de lectura en el bucket (`roles/storage.objectViewer` o `roles/storage.objectUser`). El propietario del proyecto puede otorgarte acceso ejecutando:
-> ```bash
-> task grant-access EMAIL=tu_correo@gmail.com ROLE=roles/storage.objectViewer
-> ```
-
----
-
-### 2. Reconstruir o actualizar el dataset desde la fuente externa
-
-Si necesitas reconstruir el dataset desde cero o actualizarlo con datos recién publicados en la [página de datos abiertos de MiBici](https://mibici.net/es/datos-abiertos/), puedes usar DVC o ejecutar el script directamente.
-
-#### A. Ejecución de la etapa de DVC (`dvc repro`)
-
-```bash
-uv sync
-uv run dvc repro --force dataset
-# o alternativamente con Task:
-task data
-```
-
-**¿Qué hace exactamente este comando?**
-* **No descarga** los datos desde Google Cloud Storage; ejecuta el comando `uv run python -m mibici.dataset` configurado en [dvc.yaml](dvc.yaml).
-* Consulta el sitio web de MiBici, descarga los archivos CSV mensuales correspondientes a la **ventana por defecto (los últimos 3 años hasta la fecha actual)**, procesa y normaliza los viajes, une la nomenclatura de estaciones y genera:
-  * `data/processed/trips.parquet` (~390 MB)
-  * `data/raw/stations_nomenclature.csv` (~40 KB)
-* La bandera `--force` fuerza a DVC a reejecutar la etapa ignorando el caché previo.
-* **Consideraciones importantes:**
-  * **Ventana móvil:** Dado que el rango por defecto se calcula a partir de `date.today()`, ejecutarlo en distintas fechas descargará nuevos datos y alterará los hashes en [dvc.lock](dvc.lock).
-  * **Tiempo y recursos:** Procesar 3 años de viajes implica descargar y transformar millones de registros, lo que puede tardar varios minutos dependiendo de la conexión y CPU.
-
-#### B. Delimitar un rango de fechas personalizado
-
-Puedes personalizar el período de descarga utilizando las opciones `--start-date` y `--end-date` (en formato `AAAA-MM-DD`). Esto es muy útil para pruebas rápidas, análisis acotados o para evitar procesar 3 años completos:
-
-```bash
-# Ejemplo: Descargar únicamente los viajes del año 2023
-uv run python -m mibici.dataset --start-date 2023-01-01 --end-date 2023-12-31
-
-# Ejemplo: Descargar desde el 1 de enero de 2024 hasta la fecha actual
-uv run python -m mibici.dataset --start-date 2024-01-01
-
-# Ejemplo: Descargar un período corto para desarrollo y pruebas rápidas
-uv run python -m mibici.dataset --start-date 2024-05-01 --end-date 2024-05-31
-```
-
-**Parámetros disponibles:**
-* `--start-date`: Primer día del rango (`AAAA-MM-DD`). Por defecto: hace 3 años.
-* `--end-date`: Último día del rango (`AAAA-MM-DD`). Por defecto: fecha actual.
-* `--output-path`: Ruta de salida para el archivo parquet limpio (por defecto: `data/processed/trips.parquet`).
-* `--nomenclature-output-path`: Ruta de salida para la nomenclatura (por defecto: `data/raw/stations_nomenclature.csv`).
-
----
-
-### 3. Subir nuevos datos versionados al almacenamiento remoto (Mantenedores)
-
-Si eres el encargado de actualizar el dataset oficial y deseas compartir la nueva versión con el equipo en Google Cloud Storage:
-
-```bash
-gcloud auth application-default login
-uv run dvc push
-# o alternativamente con Task:
-task dvc:push
-```
-
-Posteriormente, haz commit y push del archivo `dvc.lock` actualizado a Git para que tus compañeros puedan sincronizar los nuevos datos con `uv run dvc pull`.
-
----
-
-## Calidad de código y estilo (Ruff y Pre-commit Hooks)
-
-El proyecto utiliza [Ruff](https://docs.astral.sh/ruff/) como linter y formateador de código extremadamente rápido, configurado en el archivo [pyproject.toml](file:///home/bryan/learning/mibici/pyproject.toml) (longitud máxima de línea de 99 caracteres y ordenamiento automático de imports con `isort`).
-
-### Uso de Ruff
-
-Puedes verificar o aplicar formato manualmente utilizando `task` o directamente `uv`:
-
-- **Verificar formato y linteo (sin modificar archivos):**
-  ```bash
-  task lint
-  # Equivalente a:
-  # uv run ruff format --check
-  # uv run ruff check
-  ```
-
-- **Aplicar formateo y autocorrección de errores:**
-  ```bash
-  task format
-  # Equivalente a:
-  # uv run ruff check --fix
-  # uv run ruff format
-  ```
-
-### Git Pre-commit Hook
-
-Para evitar subir código con errores de estilo o sintaxis, se incluye la configuración de [pre-commit](https://pre-commit.com/) en [.pre-commit-config.yaml](file:///home/bryan/learning/mibici/.pre-commit-config.yaml), la cual ejecuta automáticamente `ruff-check --fix` y `ruff-format` antes de cada `git commit`.
-
-1. **Instalar el hook en tu entorno Git local:**
-   ```bash
-   task hooks:install
-   # o: uv run pre-commit install
-   ```
-
-2. **Ejecutar el hook manualmente sobre todos los archivos:**
-   ```bash
-   task hooks:run
-   # o: uv run pre-commit run --all-files
-   ```
-
-Una vez instalado, cada vez que ejecutes `git commit`, Ruff revisará y formateará los archivos modificados de manera transparente.
-
----
-
-## Flujo de trabajo y contribución (GitHub Flow)
-
-Para colaborar en este proyecto se sigue la metodología [GitHub Flow](https://docs.github.com/en/get-started/using-github/github-flow), diseñada para mantener un ciclo de entrega continuo, simple y ordenado:
-
-1. **Crear una rama (`branch`):** Parte siempre de la rama `main` actualizada con un nombre descriptivo según la convención de ramas.
-2. **Realizar cambios y commits:** Haz commits frecuentes, atómicos y con mensajes claros siguiendo la convención de commits.
-3. **Verificar calidad localmente:** Antes de subir tus cambios o solicitar revisión, ejecuta las herramientas de formateo y tests:
-   ```bash
-   task lint
-   task test
-   ```
-4. **Abrir un Pull Request (PR):** Publica tu rama en GitHub y abre un Pull Request hacia `main`. Describe qué cambios introdujiste, capturas/resultados si aplica, y referencia los issues relacionados.
-5. **Revisión de código:** Resuelve comentarios, sugerencias o verificaciones automáticas de CI.
-6. **Merge y limpieza:** Una vez aprobado, el PR se fusiona a `main` y la rama de trabajo se elimina.
-
----
-
-### Convención de nombres de ramas
-
-Las ramas deben nombrarse en minúsculas, usando `kebab-case` (palabras separadas por guiones) y organizadas mediante un prefijo que describa el propósito del cambio:
+## Estructura
 
 ```text
-<tipo>/<descripcion-corta>
+data/raw/          CSV originales; no se versionan con Git
+data/processed/    tablas consolidadas
+notebooks/         exploración y comunicación
+src/mibici/        ingesta, features y entrenamiento
+models/            modelos serializados
+reports/figures/   gráficas y artefactos
+references/        ML Canvas y arquitectura
 ```
 
-#### Prefijos disponibles:
+## Instalación
 
-| Prefijo | Propósito | Ejemplo |
-| :--- | :--- | :--- |
-| **`feat/`** | Nueva funcionalidad o módulo del proyecto | `feat/weather-feature-extraction` |
-| **`fix/`** | Corrección de un bug o error en datos/código | `fix/station-id-type-mismatch` |
-| **`docs/`** | Cambios exclusivamente en documentación | `docs/add-contributing-guide` |
-| **`refactor/`** | Cambios en el código que no alteran la lógica ni añaden funcionalidades | `refactor/dataset-cleaning-pipeline` |
-| **`test/`** | Adición o corrección de pruebas unitarias o de integración | `test/add-dataset-schema-checks` |
-| **`chore/`** | Tareas de mantenimiento, dependencias o tooling | `chore/update-uv-lock` |
-
----
-
-### Convención de mensajes de commits (Conventional Commits)
-
-Adoptamos la especificación de [Conventional Commits](https://www.conventionalcommits.org/) para mantener un historial de cambios legible, uniforme y automatizable:
-
-```text
-<tipo>(<alcance-opcional>): <descripción concisa en imperativo>
-
-[cuerpo opcional explicando el porqué o detalles del cambio]
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
 
-#### Tipos de commits comunes:
-- **`feat`**: Incorpora una nueva funcionalidad (`feat(dataset): add holiday indicator feature`).
-- **`fix`**: Corrige un error o bug (`fix(dvc): set correct quota project in adc`).
-- **`docs`**: Modificaciones en documentación (`docs(readme): document git workflow and branch conventions`).
-- **`refactor`**: Reorganización de código sin cambiar comportamiento (`refactor(dataset): simplify date parsing loop`).
-- **`test`**: Pruebas automáticas (`test(dataset): add tests for raw stations nomenclature`).
-- **`chore`**: Actualizaciones de paquetes, configuraciones o tareas rutinarias (`chore(deps): update hydra-core`).
+## Datos
 
-#### Buenas prácticas:
-- **Modo imperativo:** Redacta el mensaje como una orden directa (ej. `add feature`, no `added feature` / `agrega validación`, no `agregando validación`).
-- **Línea de título concisa:** Mantén la primera línea en menos de 72 caracteres.
-- **Commits atómicos:** Cada commit debe resolver una única unidad lógica de trabajo.
+Descargar los CSV mensuales publicados por MiBici y colocarlos en `data/raw/`:
 
---------
+- `datos_abiertos_AAAA_MM.csv`
+- `nomenclatura_AAAA_MM.csv`
+
+Los nombres exactos pueden variar históricamente. La ingesta intenta `utf-8`,
+`utf-8-sig`, `cp1252` y `latin1`, y normaliza los nombres de columnas.
+La versión del snapshot se conserva en
+[`references/data_manifest.csv`](references/data_manifest.csv), con nombre,
+filas, tamaño y SHA-256 de cada archivo. Este manifiesto es el mecanismo de
+versionado de datos: permite verificar que otra computadora usa exactamente
+los mismos CSV sin subir los datos grandes al repositorio.
+
+Consolidar los datos:
+
+```bash
+PYTHONPATH=.:src python -m mibici.dataset
+```
+
+## Entrenamiento y MLflow
+
+```bash
+PYTHONPATH=.:src python -m mibici.training
+mlflow ui
+```
+
+El pipeline usa una partición temporal del 80/20 para P1 y P2. P2 es un proxy:
+los datos abiertos no contienen inventario real; se marca riesgo alto cuando la
+demanda previa dividida entre capacidad alcanza el umbral configurado en
+`config.py`. Este supuesto debe validarse con el equipo.
+
+## Flujo colaborativo
+
+La rama principal debe permanecer protegida. Cada cambio se trabaja en una
+rama `feature/<tema>`, se revisa mediante Pull Request y se integra solo
+después de ejecutar el pipeline y sus validaciones. Los CSV grandes se
+reconstruyen mediante la ingesta documentada y se verifican contra el
+manifiesto; nunca se suben directamente al repositorio.
+
+## Limitaciones conocidas
+
+- No hay inventario histórico de bicicletas; P2 no representa una medición real
+  de disponibilidad.
+- El catálogo usado debe corresponder al periodo documentado.
+- Antes de la entrega hay que agregar las URL exactas de las fuentes, el rango
+  real, conteos finales y capturas de MLflow.
