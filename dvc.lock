@@ -24,3 +24,110 @@ stages:
       hash: md5
       md5: 59ea07ca92d2b44d2c343e85af726dc7
       size: 40841
+  p2_dataset:
+    cmd: uv run --locked python -m mibici.dataset --start-date 2023-11-01 
+      --end-date 2026-09-30 --output-path 
+      data/processed/trips_fechas_corregidas.parquet --nomenclature-output-path 
+      data/raw/stations_nomenclature_reconstruccion.csv
+    deps:
+    - path: mibici/dataset.py
+      hash: md5
+      md5: 4756479ed43c11d583e6723bd9ce0ea5
+      size: 15514
+    - path: pyproject.toml
+      hash: md5
+      md5: 72427527724aaf31b1fe3ca1f650f616
+      size: 1431
+    - path: uv.lock
+      hash: md5
+      md5: b4d3a6268ffd99ba4d23f3a8bb155cff
+      size: 369049
+    outs:
+    - path: data/processed/trips_fechas_corregidas.parquet
+      hash: md5
+      md5: 43d42f9321bc9db65ab4a283d541ad5a
+      size: 371788947
+    - path: data/raw/stations_nomenclature_reconstruccion.csv
+      hash: md5
+      md5: 59ea07ca92d2b44d2c343e85af726dc7
+      size: 40841
+  p2_movements:
+    cmd: uv run --locked python -m mibici.build_p2_movements
+    deps:
+    - path: data/processed/trips_fechas_corregidas.parquet
+      hash: md5
+      md5: 43d42f9321bc9db65ab4a283d541ad5a
+      size: 371788947
+    - path: data/raw/stations_nomenclature_reconstruccion.csv
+      hash: md5
+      md5: 59ea07ca92d2b44d2c343e85af726dc7
+      size: 40841
+    - path: mibici/build_p2_movements.py
+      hash: md5
+      md5: 7ecfaac530f9ba7d0d02521906a0cf05
+      size: 6723
+    - path: mibici/config.py
+      hash: md5
+      md5: afd0ed1bd952484da98a328e7b2a8aee
+      size: 2237
+    - path: mibici/features.py
+      hash: md5
+      md5: b8f60dbc31d1759fb0479fc2f555212f
+      size: 10863
+    - path: pyproject.toml
+      hash: md5
+      md5: 72427527724aaf31b1fe3ca1f650f616
+      size: 1431
+    - path: uv.lock
+      hash: md5
+      md5: b4d3a6268ffd99ba4d23f3a8bb155cff
+      size: 369049
+    outs:
+    - path: data/interim/p2_movimientos_corregidos.parquet
+      hash: md5
+      md5: ad2741e1d1199d14c6e91aa8b2a516e3
+      size: 16688611
+    - path: data/interim/p2_movimientos_resumen.json
+      hash: md5
+      md5: 07eec48c938218c017c2d33940b5eb25
+      size: 370
+  p2_examples:
+    cmd: uv run --locked python -m mibici.build_p2_examples
+    deps:
+    - path: data/interim/p2_movimientos_corregidos.parquet
+      hash: md5
+      md5: ad2741e1d1199d14c6e91aa8b2a516e3
+      size: 16688611
+    - path: data/raw/stations_nomenclature_reconstruccion.csv
+      hash: md5
+      md5: 59ea07ca92d2b44d2c343e85af726dc7
+      size: 40841
+    - path: mibici/build_p2_examples.py
+      hash: md5
+      md5: a341167e3017999ef8821d7b47aa8485
+      size: 5132
+    - path: mibici/config.py
+      hash: md5
+      md5: afd0ed1bd952484da98a328e7b2a8aee
+      size: 2237
+    - path: mibici/features.py
+      hash: md5
+      md5: b8f60dbc31d1759fb0479fc2f555212f
+      size: 10863
+    - path: pyproject.toml
+      hash: md5
+      md5: 72427527724aaf31b1fe3ca1f650f616
+      size: 1431
+    - path: uv.lock
+      hash: md5
+      md5: b4d3a6268ffd99ba4d23f3a8bb155cff
+      size: 369049
+    outs:
+    - path: data/interim/p2_examples_summary.json
+      hash: md5
+      md5: ad99649e692d58d268047b9c6754007f
+      size: 708
+    - path: data/processed/p2_examples.parquet
+      hash: md5
+      md5: 2b49d47ce98f26839abe4382546aa9b1
+      size: 327025293

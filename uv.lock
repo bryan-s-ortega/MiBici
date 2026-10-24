@@ -2097,6 +2097,7 @@ dependencies = [
     { name = "dvc-gs" },
     { name = "joblib" },
     { name = "loguru" },
+    { name = "matplotlib" },
     { name = "mlflow" },
     { name = "pandas" },
     { name = "pyarrow" },
@@ -2110,7 +2111,6 @@ dependencies = [
 dev = [
     { name = "dvc" },
     { name = "jupyter" },
-    { name = "matplotlib" },
     { name = "mkdocs" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -2123,6 +2123,7 @@ requires-dist = [
     { name = "dvc-gs", specifier = ">=3.0.1" },
     { name = "joblib", specifier = ">=1.6.0" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "mlflow", specifier = "==3.16.1" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "pyarrow", specifier = ">=18.0" },
@@ -2136,7 +2137,6 @@ requires-dist = [
 dev = [
     { name = "dvc", specifier = ">=3.60" },
     { name = "jupyter", specifier = ">=1.1.1" },
-    { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "pre-commit", specifier = ">=4.7.0" },
     { name = "pytest", specifier = ">=9.1.1" },

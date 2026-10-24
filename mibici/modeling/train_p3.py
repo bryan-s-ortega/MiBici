@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mlflow
+from mlflow.models import infer_signature
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ from sklearn.metrics import (
     davies_bouldin_score,
     silhouette_score,
 )
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from mibici.config import (
@@ -281,20 +283,23 @@ def train_p3(
     # 3. Ajuste del modelo
     print(f"[3/5] Entrenando {algorithm.upper()} con k={k} ({model_type})...", flush=True)
     if algorithm == "kmeans":
-        model = KMeans(n_clusters=k, random_state=seed, n_init=10)
+        cluster = KMeans(n_clusters=k, random_state=seed, n_init=10)
     elif algorithm == "agglomerative":
-        model = AgglomerativeClustering(n_clusters=k, linkage="ward")
+        cluster = AgglomerativeClustering(n_clusters=k, linkage="ward")
     else:
         raise ValueError(f"Algoritmo no soportado: {algorithm}")
 
-    labels = model.fit_predict(X_scaled)
+    # El pipeline recibe variables sin escalar también al inferir: evita la
+    # discrepancia entre el ejemplo de entrada y el estimador serializado.
+    model = Pipeline([("scale", StandardScaler()), ("cluster", cluster)])
+    labels = model.fit_predict(X)
     features_df["cluster"] = labels
 
     # 4. Cálculo de métricas
     sil_score = float(silhouette_score(X_scaled, labels))
     db_score = float(davies_bouldin_score(X_scaled, labels))
     ch_score = float(calinski_harabasz_score(X_scaled, labels))
-    inertia = float(model.inertia_) if algorithm == "kmeans" else float("nan")
+    inertia = float(cluster.inertia_) if algorithm == "kmeans" else float("nan")
 
     metrics = {
         "silhouette_score": sil_score,
@@ -310,7 +315,7 @@ def train_p3(
     run_name = f"P3_{algorithm}_{model_type}_k{k}"
     print(f"[4/5] Registrando ejecución en MLflow ({run_name})...", flush=True)
 
-    with mlflow.start_run(run_name=run_name) as run:
+    with mlflow.start_run(run_name=run_name, nested=mlflow.active_run() is not None) as run:
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=PROJ_ROOT, text=True
         ).strip()
@@ -327,6 +332,11 @@ def train_p3(
                 "target_tipo": "segmentacion_estaciones",
                 "git_commit": commit,
                 "working_tree_dirty": str(bool(dirty)).lower(),
+                "question": "P3",
+                "model_family": algorithm,
+                "stage_of_work": "selection",
+                "team": "23",
+                "commit": commit,
             }
         )
 
@@ -346,6 +356,11 @@ def train_p3(
         )
 
         mlflow.log_metrics(metrics)
+        mlflow.log_input(
+            mlflow.data.from_pandas(
+                X.assign(station_key=features_df.index.astype(str)),
+                source=str(P3_TRIPS_PATH), name="p3_perfiles_estacion"
+            ), context="training")
 
         # Generar artefactos visuales y reportes
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -384,6 +399,16 @@ def train_p3(
                 "variables": feature_cols,
             }
             summary_file.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
+            (temp_path / "configuracion.json").write_text(json.dumps({
+                "model_type": model_type, "algorithm": algorithm, "k": k,
+                "seed": seed, "features": feature_cols,
+            }, indent=2), encoding="utf-8")
+            (temp_path / "manifiesto.json").write_text(json.dumps({
+                "trips_sha256": file_hash(P3_TRIPS_PATH),
+                "stations_sha256": file_hash(P3_STATIONS_PATH),
+                "stations_count": len(features_df),
+                "note": "Clustering descriptivo; no existe train/validation/test supervisado",
+            }, indent=2), encoding="utf-8")
 
             # Guardar copia fija en reports/figures/
             FIGURES_DIR.mkdir(parents=True, exist_ok=True)
@@ -397,6 +422,8 @@ def train_p3(
             sk_model=model,
             name="modelo_p3",
             input_example=X.head(5),
+            signature=(infer_signature(X.head(5), model.predict(X.head(5)))
+                       if algorithm == "kmeans" else infer_signature(X.head(5))),
             serialization_format="cloudpickle",
         )
 
@@ -415,7 +442,7 @@ def train_p3(
     print(f"      Silhouette Score:    {sil_score:.4f}")
     print(f"      Davies-Bouldin:      {db_score:.4f}")
     print(f"      Calinski-Harabasz:   {ch_score:.1f}")
-    return metrics
+    return {**metrics, "run_id": run.info.run_id}
 
 
 def main() -> None:

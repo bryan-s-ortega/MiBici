@@ -8,3 +8,42 @@ stages:
     outs:
       - data/processed/trips.parquet
       - data/raw/stations_nomenclature.csv
+  p2_dataset:
+    cmd: >-
+      uv run --locked python -m mibici.dataset
+      --start-date 2023-11-01 --end-date 2026-09-30
+      --output-path data/processed/trips_fechas_corregidas.parquet
+      --nomenclature-output-path data/raw/stations_nomenclature_reconstruccion.csv
+    deps:
+      - mibici/dataset.py
+      - pyproject.toml
+      - uv.lock
+    outs:
+      - data/processed/trips_fechas_corregidas.parquet
+      - data/raw/stations_nomenclature_reconstruccion.csv
+  p2_movements:
+    cmd: uv run --locked python -m mibici.build_p2_movements
+    deps:
+      - mibici/build_p2_movements.py
+      - mibici/features.py
+      - mibici/config.py
+      - pyproject.toml
+      - uv.lock
+      - data/processed/trips_fechas_corregidas.parquet
+      - data/raw/stations_nomenclature_reconstruccion.csv
+    outs:
+      - data/interim/p2_movimientos_corregidos.parquet
+      - data/interim/p2_movimientos_resumen.json
+  p2_examples:
+    cmd: uv run --locked python -m mibici.build_p2_examples
+    deps:
+      - mibici/build_p2_examples.py
+      - mibici/features.py
+      - mibici/config.py
+      - pyproject.toml
+      - uv.lock
+      - data/interim/p2_movimientos_corregidos.parquet
+      - data/raw/stations_nomenclature_reconstruccion.csv
+    outs:
+      - data/processed/p2_examples.parquet
+      - data/interim/p2_examples_summary.json

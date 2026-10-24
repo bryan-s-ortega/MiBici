@@ -19,6 +19,7 @@ dependencies = [
     "dvc-gs>=3.0.1",
     "joblib>=1.6.0",
     "loguru>=0.7.3", # Loggings
+    "matplotlib>=3.11.2", # Evaluation artifacts for train entry points
     "mlflow==3.16.1",
     "pandas>=3.0.6", # Data Processing
     "pyarrow>=18.0", # Parquet output
@@ -47,7 +48,6 @@ force-sort-within-sections = true
 [dependency-groups]
 dev = [
     "jupyter>=1.1.1",
-    "matplotlib>=3.11.2",
     "mkdocs>=1.6.1",
     "dvc>=3.60", # Data versioning
     "pytest>=9.1.1",

@@ -283,3 +283,74 @@ Para ejecutar los experimentos base:
   ```bash
   uv run python -m mibici.baseline_p2
   ```
+
+## MLflow Projects — propuesta común de P1, P2 y P3
+
+`MLproject` ofrece `ingest`, `train` y `search`. Cada ejecución desde la carpeta
+del repositorio crea una corrida en el experimento `mibici-equipo23-mlprojects`.
+El proyecto declara Python 3.13.16 y dependencias en `python_env.yaml`; el
+procedimiento local recomendado usa las versiones exactas de `uv.lock`.
+Los datos **no** se incluyen en Git. Para P2 se añadió la cadena fija de DVC
+`p2_dataset → p2_movements → p2_examples` en `dvc.yaml`. Hay que ejecutar
+`dvc repro p2_examples`, revisar el `dvc.lock` producido y subir datos mediante
+`dvc push` desde una cuenta con acceso a GCS. No se ha publicado un `dvc.lock`
+de esas etapas desde este entorno sin los datos originales.
+
+```bash
+cd ~/proyectos/MiBici
+git pull
+uv sync --locked
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5001
+# En otra terminal: uv run --locked mlflow server --backend-store-uri sqlite:///mlflow_mibici.db --host 127.0.0.1 --port 5001
+uv run --locked dvc pull
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e ingest -P question=P2
+```
+
+Si no existe `p2_examples.parquet`, pero sí los viajes corregidos y el
+catálogo, `-e ingest -P question=P2 -P build=true` reconstruye movimientos y
+ejemplos. Para versionarlos realmente en DVC ejecuta `uv run --locked dvc repro
+p2_examples` sobre la etapa completa y comparte el `dvc.lock` y el cache
+mediante `dvc push`. La etapa de ingesta fija 2023-11-01 a 2026-09-30;
+evita cambiar los cortes temporales entre corridas.
+
+```bash
+# P2: baseline, árbol individual y búsqueda anidada (tres árboles + baseline).
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e train -P question=P2 -P model=baseline
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e train -P question=P2 -P model=tree -P max_depth=5 -P min_samples_leaf=100 -P class_weight=balanced
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e search -P question=P2 -P seed=42 -P sample_fraction=0.05
+
+# P1: primero preparar los datos propios; luego ejecutar variantes.
+uv run --locked python notebooks/preparacion_p1.py
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e train -P question=P1 -P model=rf -P max_depth=6 -P min_samples_leaf=8 -P n_estimators=200
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e search -P question=P1
+
+# P3: agrupación por estaciones; model=agglomerative no permite inferencia nueva.
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e train -P question=P3 -P model=kmeans -P k=4
+uv run --locked mlflow run . --env-manager local --experiment-name mibici-equipo23-mlprojects -e search -P question=P3
+```
+
+Las métricas de P2 se calculan por estación e intervalo de 30 minutos. La
+etiqueta indica **presión neta estimada a partir de viajes**, no que existan
+cero bicicletas o cero anclajes reales. La búsqueda usa train para ajustar,
+validation para seleccionar y abre test una vez para el ganador. El criterio
+es balanced accuracy de validación, siempre que el recall de cada clase de
+presión sea al menos 0.10. Las curvas PR usan un histograma de 200 intervalos
+y son aproximadas; la matriz de confusión y las métricas son exactas.
+
+Para registrar la versión elegida (una vez revisadas métricas y artefactos),
+usa el `run_id` impreso por cada script. El alias `champion` distingue la
+mejor versión académica, **no habilita un servicio en producción**. P2 se
+registra con el nombre explícito `Presion_Proxy_Academica`.
+
+```bash
+uv run --locked python -m mibici.register_project_models --question P2 --run-id RUN_ID_GANADOR
+# Si MLflow 3 expone solo URI models:/m-..., agregar --model-uri models:/m-ID
+```
+
+El registro comprueba que el alias resuelva a la nueva versión y que el modelo
+cargado prediga una fila sintética. P3 debe ser KMeans para aceptar `predict`.
+Cada responsable debe repetir entrenamiento, elegir y registrar P1 y P3, y
+adjuntar capturas de sus modelos y corridas al documento del equipo.
+Las búsquedas P1/P3 ejecutan tres candidatos anidados; P1 evalúa test solo
+para el elegido por MAE de validación. P3 elige por silhouette sobre el mismo
+conjunto de estaciones y no pretende que esa métrica sea desempeño futuro.

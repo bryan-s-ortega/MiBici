@@ -1,0 +1,30 @@
+name: mibici-equipo23
+
+# Con --env-manager local se utiliza el entorno fijado por uv.lock.
+# python_env permite también ejecutar el proyecto con el gestor virtual de MLflow.
+python_env: python_env.yaml
+
+entry_points:
+  ingest:
+    parameters:
+      question: {type: str, default: P2}
+      build: {type: str, default: "false"}
+    command: "python -m mibici.project_cli ingest --question {question} --build {build}"
+  train:
+    parameters:
+      question: {type: str, default: P2}
+      model: {type: str, default: tree}
+      seed: {type: int, default: 42}
+      max_depth: {type: int, default: 5}
+      min_samples_leaf: {type: int, default: 100}
+      sample_fraction: {type: float, default: 0.05}
+      class_weight: {type: str, default: balanced}
+      n_estimators: {type: int, default: 200}
+      k: {type: int, default: 4}
+    command: "python -m mibici.project_cli train --question {question} --model {model} --seed {seed} --max-depth {max_depth} --min-samples-leaf {min_samples_leaf} --sample-fraction {sample_fraction} --class-weight {class_weight} --n-estimators {n_estimators} --k {k}"
+  search:
+    parameters:
+      question: {type: str, default: P2}
+      seed: {type: int, default: 42}
+      sample_fraction: {type: float, default: 0.05}
+    command: "python -m mibici.project_cli search --question {question} --seed {seed} --sample-fraction {sample_fraction}"
